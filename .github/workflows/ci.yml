@@ -1,0 +1,6 @@
+# TODO: CI/CD pipeline
+# Steps required:
+# 1. Checkout code
+# 2. Build Docker image
+# 3. Run tests (pytest)
+# 4. Push image to ghcr.io/${{ github.repository }}
