@@ -19,7 +19,7 @@ permissions:
     packages: write
 
 env:
-    REGISTRY: ghrc.io
+    REGISTRY: ghcr.io
     
 jobs:
     scan:
