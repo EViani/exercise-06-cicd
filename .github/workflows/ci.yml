@@ -56,7 +56,7 @@ jobs:
             
             - name: Test
               run: |
-               pytest /tests
+               pytest tests/
 
             - name: Compose Down
               run: |
