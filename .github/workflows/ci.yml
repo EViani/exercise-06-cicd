@@ -1,6 +1,96 @@
+
 # TODO: CI/CD pipeline
 # Steps required:
 # 1. Checkout code
 # 2. Build Docker image
 # 3. Run tests (pytest)
 # 4. Push image to ghcr.io/${{ github.repository }}
+
+
+name: CI/CD pipeline
+
+on:
+    push: 
+        branches: 
+            - main
+
+permissions:
+    contents: read
+    packages: write
+
+env:
+    REGISTRY: ghrc.io
+    
+jobs:
+    scan:
+        name: 
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+               fetch-depth: 0
+            - uses: gitleaks/gitleaks-action@v2
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+            - name: Set Python
+              uses: actions/setup-python@v5
+              with:
+                python-version: "3.11"
+            
+            - name: Install dependencies
+              run: |
+               pip install -r requeriments.txt
+               pip install pytest request
+               cp .env.example .env
+            
+            - name: Compose up
+              run: |
+               docker compose up -d --build
+
+            - name: wait up
+              run: 
+               sleep 5
+               curl http://localhost:8080/api/health || exit 0
+                
+            
+            - name: Test
+              run: |
+               pytest /tests
+
+            - name: Compose Down
+              run: |
+                docker compose down -v  
+
+            - name: Convert repository name to lowercase
+               #EViani/excercise-06-cicd -> eviani/excersice-06-cicd
+              run: |
+               echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+            
+            - name: Log in Registry
+              uses: docker/login-action@v3
+              with:
+                registry: ${{env.REGISTRY}}
+                username: ${{github.actor}} 
+                password: ${{secrets.GITHUB_TOKEN}} 
+            
+            - name: Extract metadata (tags, labels) for Docker
+              id: meta
+              uses: docker/metadata-action@v5
+              with:
+                images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+                tags: |
+                    type=ref,event=branch
+                    type=semver,pattern={{version}}
+                    type=sha,format=short
+
+            - name: Build and push Docker image
+              uses: docker/build-push-action@v5
+              with:
+                context: .
+                push: true
+                tags: ${{ steps.meta.outputs.tags }}
+                labels: ${{ steps.meta.outputs.labels }}
+
+               
+            
